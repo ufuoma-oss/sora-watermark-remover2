@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sora Watermark Remover</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px 20px;
+            margin: 30px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            background: #f8f9ff;
+            border-color: #5a6fd8;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .features {
+            margin: 30px 0;
+            text-align: left;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            color: #666;
+        }
+        
+        .feature-icon {
+            color: #667eea;
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .pricing {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .price {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .api-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .api-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .api-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="api-status" id="apiStatus">Checking API...</div>
+    
+    <div class="container">
+        <div class="logo">🎬 Sora Watermark Remover</div>
+        <div class="subtitle">AI-Powered Video Watermark Removal</div>
+        
+        <div class="pricing">
+            <div class="price">$9.99/month</div>
+            <div>Unlimited watermark removal</div>
+        </div>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Click to upload video or drag & drop</div>
+            <input type="file" id="fileInput" accept="video/*" style="display: none;">
+        </div>
+        
+        <button class="btn" onclick="uploadVideo()">Remove Watermarks</button>
+        
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">🤖</span>
+                <span>AI-powered detection</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">⚡</span>
+                <span>Fast processing</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">🔒</span>
+                <span>Secure & private</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">💳</span>
+                <span>Secure payments</span>
+            </div>
+        </div>
+        
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://sora-watermark-remover-production.up.railway.app';
+        
+        // Check API status
+        async function checkAPI() {
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                const data = await response.json();
+                if (data.status === 'healthy') {
+                    document.getElementById('apiStatus').textContent = 'API Connected ✅';
+                    document.getElementById('apiStatus').className = 'api-status connected';
+                } else {
+                    throw new Error('API not healthy');
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').textContent = 'API Disconnected ❌';
+                document.getElementById('apiStatus').className = 'api-status disconnected';
+            }
+        }
+        
+        // Upload video
+        async function uploadVideo() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('Please select a video file first!', 'error');
+                return;
+            }
+            
+            showStatus('Uploading video...', 'success');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/videos/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus(`Video uploaded successfully! Job ID: ${data.job_id}`, 'success');
+                } else {
+                    const error = await response.json();
+                    showStatus(`Error: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+        
+        // Check API on load
+        checkAPI();
+        
+        // File input change
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                showStatus(`Selected: ${e.target.files[0].name}`, 'success');
+            }
+        });
+    </script>
+</body>
+</html>

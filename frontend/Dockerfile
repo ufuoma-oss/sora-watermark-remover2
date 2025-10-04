@@ -3,11 +3,11 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package.json
+COPY package.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (use npm install instead of npm ci)
+RUN npm install --production
 
 # Copy source code
 COPY . .
