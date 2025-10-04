@@ -1,0 +1,48 @@
+# Production Configuration for sorawatermarks.com
+domain: sorawatermarks.com
+email: support@sorawatermarks.com
+brand: Sora Watermark Remover
+
+# Railway Configuration
+railway:
+  project_name: sorawatermarks
+  services:
+    - name: backend
+      type: python
+      source: ./backend
+      env:
+        - DATABASE_URL=${DATABASE_URL}
+        - REDIS_URL=${REDIS_URL}
+        - SECRET_KEY=${SECRET_KEY}
+        - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+        - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+        - S3_BUCKET_NAME=sorawatermarks-storage
+        - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+        - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+        - FROM_EMAIL=noreply@sorawatermarks.com
+    
+    - name: frontend
+      type: static
+      source: ./frontend
+      build_command: npm ci && npm run build
+      env:
+        - REACT_APP_API_URL=https://sorawatermarks-backend.railway.app
+
+# AWS S3 Configuration
+s3:
+  bucket_name: sorawatermarks-storage
+  region: us-east-1
+  cors_policy:
+    - AllowedHeaders: ["*"]
+    - AllowedMethods: ["GET", "PUT", "POST", "DELETE"]
+    - AllowedOrigins: ["https://sorawatermarks.com", "https://sorawatermarks-backend.railway.app"]
+    - MaxAgeSeconds: 3000
+
+# DNS Configuration
+dns:
+  domain: sorawatermarks.com
+  subdomains:
+    - www.sorawatermarks.com
+    - api.sorawatermarks.com
+  ssl: true
+  cdn: true
