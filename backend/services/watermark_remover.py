@@ -232,7 +232,7 @@ class WatermarkRemover:
                 ffmpeg
                 .input(output_path)
                 .input(input_path)
-                .output(temp_path, vcodec='copy', acodec='copy', map='0:v:0', map='1:a:0')
+                .output(temp_path, vcodec='copy', acodec='copy')
                 .overwrite_output()
                 .run(quiet=True)
             )

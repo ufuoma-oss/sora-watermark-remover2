@@ -1,5 +1,6 @@
 from celery import current_task
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.celery_app import celery_app
 from app.database import SessionLocal
 from app.models import Job, JobStatus
