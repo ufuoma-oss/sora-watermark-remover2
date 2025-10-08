@@ -8,7 +8,7 @@ import uuid
 import tempfile
 from datetime import datetime, timedelta
 
-from app.database import get_db, engine
+from app.database import get_db, engine, DATABASE_URL
 from app.models import Base, User, Job, JobStatus, SubscriptionTier
 from app.schemas import (
     UserCreate, UserLogin, User as UserSchema, Token,
@@ -24,7 +24,8 @@ from app.tasks import process_video
 from services.gcs_service import gcs_service
 
 # Create database tables
-Base.metadata.create_all(bind=engine)
+if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Sora Watermark Remover API", version="1.0.0")
 

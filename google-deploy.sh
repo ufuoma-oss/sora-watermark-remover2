@@ -8,7 +8,7 @@ export PROJECT_ID="watermark-remover-474509"
 export REGION="us-central1"
 export NETWORK="watermark-remover-network"
 export AR_REPO="watermark-remover"
-export CONNECTOR_NAME="watermark-remover-connector"
+export CONNECTOR_NAME="watermark-remover-conn"
 export DB_INSTANCE_NAME="watermark-remover-db"
 export REDIS_INSTANCE_NAME="watermark-remover-redis"
 
@@ -18,7 +18,7 @@ gcloud config set project $PROJECT_ID
 # --- Backend Infrastructure Setup ---
 echo "
 --- Enabling Google Cloud APIs ---"
-yes | gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com sqladmin.googleapis.com redis.googleapis.com compute.googleapis.com vpcaccess.googleapis.com servicenetworking.googleapis.com
+yes | gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com sqladmin.googleapis.com redis.googleapis.com compute.googleapis.com vpcaccess.googleapis.com servicenetworking.googleapis.com secretmanager.googleapis.com
 
 # --- Create Artifact Registry Repository ---
 echo "
@@ -39,8 +39,10 @@ echo "
 DB_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 20)
 gcloud sql instances create $DB_INSTANCE_NAME --database-version=POSTGRES_15 --region=$REGION --cpu=1 --memory=4GB --network=$NETWORK || echo "Database instance already exists."
 DB_IP=$(gcloud sql instances describe $DB_INSTANCE_NAME --format='value(ipAddresses.ipAddress)')
-gcloud sql users create sorawatermarks --instance=$DB_INSTANCE_NAME --password=$DB_PASSWORD || echo "Database user already exists."
+gcloud sql users create sorawatermarks --instance=$DB_INSTANCE_NAME --password=$DB_PASSWORD || gcloud sql users set-password sorawatermarks --instance=$DB_INSTANCE_NAME --password=$DB_PASSWORD
 gcloud sql databases create sorawatermarks_db --instance=$DB_INSTANCE_NAME || echo "Database already exists."
+echo $DB_PASSWORD | gcloud secrets create db-password --data-file=- --project=$PROJECT_ID --replication-policy=automatic || echo "Secret already exists."
+gcloud secrets add-iam-policy-binding db-password --member="serviceAccount:$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')-compute@developer.gserviceaccount.com" --role="roles/secretmanager.secretAccessor" --project=$PROJECT_ID || echo "IAM policy already exists."
 
 # --- Redis (Memorystore) Setup ---
 echo "
@@ -67,10 +69,10 @@ gcloud run deploy watermark-remover-backend \
   --region $REGION \
   --allow-unauthenticated \
   --vpc-connector $CONNECTOR_NAME \
+  --update-secrets=DATABASE_URL=db-password:latest \
   --set-env-vars="SECRET_KEY=$SECRET_KEY" \
   --set-env-vars="ALGORITHM=HS256" \
   --set-env-vars="ACCESS_TOKEN_EXPIRE_MINUTES=30" \
-  --set-env-vars="DATABASE_URL=$DATABASE_URL" \
   --set-env-vars="CELERY_BROKER_URL=$CELERY_BROKER_URL" \
   --set-env-vars="CELERY_RESULT_BACKEND=$CELERY_BROKER_URL"
 
@@ -87,8 +89,8 @@ gcloud run deploy watermark-remover-worker \
   --platform managed \
   --region $REGION \
   --vpc-connector $CONNECTOR_NAME \
+  --update-secrets=DATABASE_URL=db-password:latest \
   --set-env-vars="SECRET_KEY=$SECRET_KEY" \
-  --set-env-vars="DATABASE_URL=$DATABASE_URL" \
   --set-env-vars="CELERY_BROKER_URL=$CELERY_BROKER_URL" \
   --set-env-vars="CELERY_RESULT_BACKEND=$CELERY_BROKER_URL" \
   --command /usr/local/bin/celery \
