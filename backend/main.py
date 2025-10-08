@@ -21,7 +21,7 @@ from app.auth import (
     get_current_active_user, verify_token
 )
 from app.tasks import process_video
-from services.s3_service import s3_service
+from services.gcs_service import gcs_service
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -114,9 +114,9 @@ def upload_video(
         temp_file.write(content)
         temp_path = temp_file.name
     
-    # Upload to S3
-    s3_key = f"uploads/{current_user.id}/{unique_filename}"
-    if not s3_service.upload_file(temp_path, s3_key):
+    # Upload to GCS
+    gcs_key = f"uploads/{current_user.id}/{unique_filename}"
+    if not gcs_service.upload_file(temp_path, gcs_key):
         os.unlink(temp_path)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -127,7 +127,7 @@ def upload_video(
     job = Job(
         user_id=current_user.id,
         original_filename=file.filename,
-        original_file_path=s3_key,
+        original_file_path=gcs_key,
         status=JobStatus.PENDING
     )
     db.add(job)
@@ -201,7 +201,7 @@ def download_video(
         )
     
     # Generate presigned URL for download
-    download_url = s3_service.generate_presigned_url(
+    download_url = gcs_service.generate_presigned_url(
         job.processed_file_path,
         expiration=3600  # 1 hour
     )
